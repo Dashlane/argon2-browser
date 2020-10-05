@@ -1,0 +1,21 @@
+{
+  "name": "argon2-webpack",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "argon2-demo-webpack.js",
+  "scripts": {
+    "start": "webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "argon2-browser": "^1.13.0",
+    "base64-loader": "^1.0.0",
+    "webpack": "^4.44.1"
+  },
+  "devDependencies": {
+    "webpack-cli": "^3.3.12"
+  }
+}
