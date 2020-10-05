@@ -1,5 +1,5 @@
 {
-    "name": "argon2-browser",
+    "name": "@dashlane/argon2-browser",
     "version": "1.16.0",
     "description": "Argon2 library compiled for browser runtime",
     "main": "lib/argon2.js",
