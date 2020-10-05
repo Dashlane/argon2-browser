@@ -19,5 +19,9 @@ cp dist/argon2.js docs/dist/argon2.js
 cp dist/argon2.wasm docs/dist/argon2.wasm
 
 ./clean-cmake.sh
+./build-fallback.sh
+cp dist/argon2-fallback.js docs/dist/argon2-fallback.js
+
+./clean-cmake.sh
 
 echo Done
