@@ -1,44 +1,26 @@
-# Argon2 in browser
+# Argon2 in browser [![Build status](https://travis-ci.org/antelle/argon2-browser.svg?branch=master)](https://travis-ci.org/antelle/argon2-browser)
 
-Argon2 is a password-hashing function, the winner of Password Hashing Competition. Here, Argon2 library is compiled for browser runtime.
+Argon2 is a password-hashing function, the winner of Password Hashing Competition. Here Argon2 library is compiled for browser runtime.
 
 [Live demo](https://antelle.github.io/argon2-browser)
 
 [More about Argon2](https://github.com/P-H-C/phc-winner-argon2)
 
+[Usage](#usage)
+
 ## The numbers
 
-### :warning: they are quite old, WebAssembly is better now
-
-To cut it short, here are the numbers.
-
-Code run time:
-
-![hot run](img/hot-run.png)
-
-Init time + first run time:
-
-![load & first run](img/load-first.png)
-
-## Numbers in table (ms, lower is better)
-
-|                         | Load | First Use | Second Use |
-|-------------------------|------|-----------|------------|
-| Native -O3 SSE          | 0    | 90        | 90         |
-| Native -O3              | 0    | 140       | 140        |
-| Native -O1              | 0    | 300       | 300        |
-| Native -O0              | 0    | 750       | 750        |
-| Chrome asm.js           | 100  | 7500      | 6800       |
-| Chrome WASM             | 350  | 1700      | 1650       |
-| Chrome PNaCl            | 1500 | 200       | 200        |
-| Chrome Interpret s-expr | 1000 | 1650000   | 1650000    |
-| Chrome Interpret binary | 800  | 1800000   | 1800000    |
-| Firefox asm.js          | 360  | 1850      | 1700       |
-| Firefox WASM            | 400  | 1750      | 1650       |
-| Safari asm.js           | 100  | 7500      | 6900       |
-| IE11 asm.js             | 100  | 52000     | 47000      |
-| Edge asm.js             | 65   | 19500     | 18000      |
-| Edge +asm asm.js        | 100  | 2900      | 2850       |
+|                   | Time, ms (lower is better) |
+|-------------------|----------------------------|
+| Chrome WASM       | 225                        |
+| Chrome WASM+SIMD  | 119                        |
+| Firefox WASM      | 195                        |
+| Firefox WASM+SIMD | 135                        |
+| Safari WASM       | 174                        |
+| Native -O3 SSE    |  15                        |
+| Native -O3        |  42                        |
+| Native -O1        |  55                        |
+| Native -O0        | 395                        |
 
 ## Test Environment
 
@@ -53,63 +35,47 @@ Algorithm parameters (`-d -t 100 -m 10 -p 1`):
 
 Environment:
 
-- MacBook pro, Intel Core i5, 2.5GHz (x64)
-- Chrome 55.0.2843.0 (Official Build) canary (64-bit), V8 5.5.1
-- Firefox Nightly 51.0a1 (2016-08-29)
-- IE11 and Edge on Windows 10 (x64, Bootcamp)
-- native argon2 compiled from https://github.com/P-H-C/phc-winner-argon2 @4844d2f
+- MacBook pro 2020, Intel Core i7, 2.3GHz (x64), macOS 10.14.6 (18G95)
+- Chrome 85.0.4183.83 (Official Build)
+- Firefox 80.0.1
+- Safari 13.1.2 (15609.3.5.1.3)
+- native argon2 compiled from https://github.com/P-H-C/phc-winner-argon2 @440ceb9
 
 ## Code size
 
-It's hard to measure WebAssembly code size because the project is not finished yet and the size of wrapper is rather large. So, we measure only binary file size (.wasm).
-
-![code size](img/code-size.png)
-
-|             | Code size, kB | Comment    |
-|-------------|---------------|------------|
-| asm.js      | 109           | complete   |
-| WebAssembly | 43            | only .wasm |
-| PNaCl       | 112           | .pexe      |
+| File        | Code size, kB |
+|-------------|---------------|
+| argon2.js   | 16            |
+| argon2.wasm | 25            |
 
 ## Is Argon2 modified?
 
-Put it simply, it's the same. Some changes were added, though, required to cope with WASM issues. You can always compare it with the original argon2 to check.
+The only change is [disabling threading support](https://github.com/antelle/argon2-browser/commit/4b8950395c8c03a888ba6f417a4001458cdd3231).
 
-## Difficulties
+## SIMD
 
-Argon2 is using uint64, which is not supported by JavaScript.
-This function is called ~30M times per one iteration:
-```cpp
-uint64_t fBlaMka(uint64_t x, uint64_t y) {
-    const uint64_t m = UINT64_C(0xFFFFFFFF);
-    const uint64_t xy = (x & m) * (y & m);
-    return x + y + 2 * xy;
-}
-```
+SIMD is not quite here in WebAssembly, however for those who would like to give it a try,
+we already provide a working build with SIMD. At the moment it works only in Chrome,
+to be able to use it, you need to either add
+[this origin trial](https://developers.chrome.com/origintrials/#/view_trial/-4708513410415853567) to your website,
+or enable the SIMD feature in Chrome flags.
 
-And this one:
-```cpp
-uint64_t rotr64(const uint64_t w, const unsigned c) {
-    return (w >> c) | (w << (64 - c));
-}
-```
+More about WebAssembly SIMD support in V8: https://v8.dev/features/simd
 
-In C++, we can make use of SSE for 64-bit arithmetics. In JavaScript, when no 64-bit unsigned long type is available, different engines have different time penalties of this operation.
+On Firefox you need to enable `javascript.options.wasm_simd` option in about:config.
 
-WASM can support 64-bit integers but it requires compilation with LLVM, and not as asm.js => wasm. But this build is producing bad wasm for now. A simple experiment can be found in [perf-test.c](perf-test.c): compiling it with i64 support in LLVM gives us 4x boost.
+To use the SIMD version, load `argon2-simd.wasm` instead of `argon2.wasm`.
 
 ## JS Library
 
-Until WASM is mature, js library is using only asm.js. Here's how to try it.
-
-Install with bower:
+The library can be installed from npm:
 ```bash
-bower install argon2-browser
+npm install argon2-browser
 ```
 
-Add script to your HTML:
+Then add script to your HTML or use your favorite bundler:
 ```html
-<script src="bower_components/argon2-browser/lib/argon2.js"></script>
+<script src="node_modules/argon2-browser/lib/argon2.js"></script>
 ```
 
 Calculate the hash:
@@ -119,7 +85,13 @@ argon2.hash({ pass: 'password', salt: 'somesalt' })
     .catch(e => console.error(e.message, e.code))
 ```
 
-Bring your own bundler and promise polyfill.
+Verify the encoded hash (if you need it):
+```javascript
+argon2.verify({ pass: 'password', encoded: 'enc-hash' })
+    .then(() => console.log('OK'))
+    .catch(e => console.error(e.message, e.code))
+```
+
 Other parameters:
 ```javascript
 argon2.hash({
@@ -131,8 +103,9 @@ argon2.hash({
     mem: 1024, // used memory, in KiB
     hashLen: 24, // desired hash length
     parallelism: 1, // desired parallelism (will be computed in parallel only for PNaCl)
+    secret: new Uint8Array([...]), // optional secret data
+    ad: new Uint8Array([...]), // optional associated data
     type: argon2.ArgonType.Argon2d, // or argon2.ArgonType.Argon2i
-    distPath: '' // asm.js script location, without trailing slash
 })
 // result
 .then(res => {
@@ -147,14 +120,23 @@ argon2.hash({
 })
 ```
 
+## Usage
+
+You can use this module in several ways: 
+
+1. write the WASM loader manually, for example, if you need more control over memory ([example](docs/js/calc.js));
+2. bundle it with WebPack or another bundler ([example](examples/webpack));
+3. in vanilla js: [example](examples/vanilla);
+4. in node.js: [example](examples/node) (see a note below).
+
 ## Node.js support
 
-Of course, you can use generated asm.js code in node.js but it's not sensible: you will get much better speed by compiling native node.js addon, which is not that hard. Wait, it's already done, just install [this package](https://github.com/ranisalt/node-argon2).
+Of course you [can use](examples/node) generated WASM in node.js, but it's not sensible: you will get much better speed by compiling it as a native node.js addon, which is not that hard. Wait, it's already done, just install [this package](https://github.com/ranisalt/node-argon2).
 
 ## Is it used anywhere?
 
-It is! [KeeWeb](https://github.com/keeweb/keeweb) (web-based password manager) is using both asm.js and WebAssembly Argon2 implementations.
-[Check out the source code](https://github.com/keeweb/keeweb/blob/develop/app/scripts/util/kdbxweb-init.js#L13), if you're interested.
+It is! [KeeWeb](https://github.com/keeweb/keeweb) (web-based password manager) is using it as a password hashing function implementation.
+[Check out the source code](https://github.com/keeweb/keeweb/blob/develop/app/scripts/util/kdbxweb/kdbxweb-init.js#L11), if you're interested.
 
 ## Building
 
@@ -163,9 +145,8 @@ You can build everything with
 ./build.sh
 ```
 
-Prerequesties:
+Prerequisites:
 - emscripten with WebAssembly support ([howto](http://webassembly.org/getting-started/developers-guide/))
-- PNaCl sdk
 - CMake
 
 ## License
